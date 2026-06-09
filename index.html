@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydration Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0ea5e9">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            color: #1e293b;
+            padding: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+        }
+        .datetime {
+            font-size: 0.9rem;
+            color: #475569;
+        }
+        button {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            padding: 0.7rem 1.2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        button:hover {
+            background: #0284c7;
+        }
+        .btn-outline {
+            background: transparent;
+            color: #0ea5e9;
+            border: 1.5px solid #0ea5e9;
+            padding: 0.4rem 0.9rem;
+            font-size: 0.8rem;
+        }
+        .btn-outline:hover {
+            background: #e0f2fe;
+        }
+        .btn-danger {
+            background: #ef4444;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        .btn-export {
+            background: transparent;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.8rem;
+            margin-left: 0.4rem;
+        }
+        .btn-export:hover {
+            background: #f1f5f9;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        .modal {
+            background: white;
+            padding: 1.8rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            width: 90%;
+            max-width: 320px;
+        }
+        .modal label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+        }
+        .modal input {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 1rem;
+            margin-bottom: 1.2rem;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 0.7rem;
+            justify-content: flex-end;
+        }
+
+        /* Tabela */
+        .table-wrapper {
+            background: white;
+            border-radius: 16px;
+            padding: 0.5rem 1rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            text-align: left;
+            padding: 0.6rem 0.4rem;
+            font-size: 0.8rem;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        td {
+            padding: 0.6rem 0.4rem;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .action-btns {
+            display: flex;
+            gap: 0.3rem;
+        }
+        .icon-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.1rem 0.4rem;
+            color: #64748b;
+        }
+        .del-btn { color: #ef4444; }
+        .edit-btn { color: #0ea5e9; }
+
+        /* Métricas */
+        .metrics {
+            background: white;
+            border-radius: 16px;
+            padding: 1.2rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 0.2rem;
+        }
+        .metric-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        /* Bucket */
+        .bucket-section {
+            background: white;
+            border-radius: 16px;
+            padding: 1.2rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .bucket-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .bucket-bar {
+            height: 24px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 0.3rem;
+        }
+        .bucket-fill {
+            height: 100%;
+            background: #0ea5e9;
+            border-radius: 12px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Marcos */
+        .milestones {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.7rem;
+            margin: 1.2rem 0;
+        }
+        .milestone {
+            background: white;
+            border-radius: 12px;
+            padding: 0.6rem;
+            text-align: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .milestone-label {
+            font-size: 0.7rem;
+            color: #475569;
+            margin-bottom: 0.3rem;
+        }
+        .milestone-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .milestone-fill {
+            height: 100%;
+            background: #10b981;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* Histórico */
+        .history {
+            margin-top: 2rem;
+        }
+        .history h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        .day-card {
+            background: white;
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.8rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .day-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .day-details {
+            margin-top: 0.6rem;
+            display: none;
+            font-size: 0.9rem;
+            color: #334155;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 0.6rem;
+        }
+        details[open] .day-details {
+            display: block;
+        }
+        .delete-day {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin-left: 0.8rem;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>💧 Hidratação diária</h1>
+            <div class="datetime" id="currentDateTime"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.3rem;">
+            <button id="addEntryBtn">+ Registrar</button>
+            <button class="btn-export" id="exportJson">JSON</button>
+            <button class="btn-export" id="exportCsv">CSV</button>
+        </div>
+    </header>
+
+    <!-- Modal de adição -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal">
+            <label for="mlInput">Quantidade (mL)</label>
+            <input type="number" id="mlInput" value="500" min="1" step="50" inputmode="numeric">
+            <div class="modal-actions">
+                <button class="btn-outline" id="cancelAddModal">Cancelar</button>
+                <button id="confirmAdd">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de edição -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <label for="editTimeInput">Horário</label>
+            <input type="time" id="editTimeInput" required>
+            <label for="editMlInput">Quantidade (mL)</label>
+            <input type="number" id="editMlInput" min="1" step="50" inputmode="numeric">
+            <div class="modal-actions">
+                <button class="btn-outline" id="cancelEditModal">Cancelar</button>
+                <button id="confirmEdit">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de registros -->
+    <div class="table-wrapper">
+        <table id="entriesTable">
+            <thead>
+                <tr><th>HORÁRIO</th><th>ÁGUA</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Métricas -->
+    <div class="metrics" id="metricsContainer"></div>
+
+    <!-- Bucket -->
+    <div class="bucket-section">
+        <div class="bucket-header">
+            <span>Hidratação diária</span>
+            <span id="bucketText">0 / 4000 mL (0%)</span>
+        </div>
+        <div class="bucket-bar">
+            <div class="bucket-fill" id="bucketFill"></div>
+        </div>
+    </div>
+
+    <!-- Marcos -->
+    <div class="milestones" id="milestonesContainer"></div>
+
+    <!-- Histórico -->
+    <div class="history">
+        <h2>📅 Histórico</h2>
+        <div id="historyContainer"></div>
+    </div>
+
+    <script>
+        (function() {
+            const STORAGE_KEY = 'hydrationData';
+            const CAPACITY = 4000;
+            const MILESTONES = [1000, 2000, 3000, 4000];
+
+            // Elementos DOM
+            const currentDateTimeEl = document.getElementById('currentDateTime');
+            const addBtn = document.getElementById('addEntryBtn');
+            const addModal = document.getElementById('addModal');
+            const editModal = document.getElementById('editModal');
+            const mlInput = document.getElementById('mlInput');
+            const editTimeInput = document.getElementById('editTimeInput');
+            const editMlInput = document.getElementById('editMlInput');
+            const confirmAddBtn = document.getElementById('confirmAdd');
+            const cancelAddBtn = document.getElementById('cancelAddModal');
+            const confirmEditBtn = document.getElementById('confirmEdit');
+            const cancelEditBtn = document.getElementById('cancelEditModal');
+            const entriesTbody = document.querySelector('#entriesTable tbody');
+            const metricsContainer = document.getElementById('metricsContainer');
+            const bucketText = document.getElementById('bucketText');
+            const bucketFill = document.getElementById('bucketFill');
+            const milestonesContainer = document.getElementById('milestonesContainer');
+            const historyContainer = document.getElementById('historyContainer');
+            const exportJsonBtn = document.getElementById('exportJson');
+            const exportCsvBtn = document.getElementById('exportCsv');
+
+            let currentEditIndex = -1;
+
+            // Funções de data
+            function getTodayISO() {
+                const d = new Date();
+                return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+            }
+            function formatDateBR(iso) {
+                const [y,m,d] = iso.split('-');
+                const months = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+                return `${d} ${months[+m-1]} ${y}`;
+            }
+            function getCurrentTime() {
+                const d = new Date();
+                return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+            }
+            function updateDateTimeDisplay() {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('pt-BR');
+                const timeStr = getCurrentTime();
+                currentDateTimeEl.textContent = `Data: ${dateStr}  |  Hora atual: ${timeStr}`;
+            }
+            setInterval(updateDateTimeDisplay, 10000);
+            updateDateTimeDisplay();
+
+            // Persistência
+            function loadAllData() {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                return raw ? JSON.parse(raw) : [];
+            }
+            function saveAllData(data) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            }
+            function getTodayData(data) {
+                const today = getTodayISO();
+                let todayObj = data.find(d => d.date === today);
+                if (!todayObj) {
+                    todayObj = {
+                        date: today,
+                        total_ml: 0,
+                        events: 0,
+                        largest_drink_ml: 0,
+                        longest_dry_interval_min: 0,
+                        consistency_score: 0,
+                        entries: []
+                    };
+                    data.push(todayObj);
+                }
+                return todayObj;
+            }
+
+            // Cálculos
+            function recalcMetrics(todayObj) {
+                const entries = todayObj.entries;
+                const total = entries.reduce((sum, e) => sum + e.ml, 0);
+                const events = entries.length;
+                const largest = events ? Math.max(...entries.map(e => e.ml)) : 0;
+
+                let longestDry = 0;
+                if (entries.length >= 2) {
+                    const times = entries.map(e => {
+                        const [h,m] = e.time.split(':').map(Number);
+                        return h * 60 + m;
+                    }).sort((a,b) => a-b);
+                    for (let i = 1; i < times.length; i++) {
+                        const gap = times[i] - times[i-1];
+                        if (gap > longestDry) longestDry = gap;
+                    }
+                }
+
+                let consistency = 0;
+                if (entries.length === 0) {
+                    consistency = 0;
+                } else if (entries.length === 1) {
+                    consistency = 100;
+                } else {
+                    const times = entries.map(e => {
+                        const [h,m] = e.time.split(':').map(Number);
+                        return h * 60 + m;
+                    }).sort((a,b) => a-b);
+                    const intervals = [];
+                    for (let i = 1; i < times.length; i++) {
+                        intervals.push(times[i] - times[i-1]);
+                    }
+                    const n = intervals.length;
+                    const mean = intervals.reduce((s,v) => s+v, 0) / n;
+                    if (mean === 0) {
+                        consistency = 0;
+                    } else {
+                        const variance = intervals.reduce((s,v) => s + Math.pow(v-mean,2), 0) / n;
+                        const std = Math.sqrt(variance);
+                        const cv = std / mean;
+                        consistency = Math.round(100 * (1 - cv));
+                        if (consistency < 0) consistency = 0;
+                        if (consistency > 100) consistency = 100;
+                    }
+                }
+
+                todayObj.total_ml = total;
+                todayObj.events = events;
+                todayObj.largest_drink_ml = largest;
+                todayObj.longest_dry_interval_min = longestDry;
+                todayObj.consistency_score = consistency;
+            }
+
+            // Renderização
+            function renderEntries(entries) {
+                entriesTbody.innerHTML = '';
+                if (entries.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="3" style="text-align:center; color:#94a3b8;">Nenhum registro hoje</td>';
+                    entriesTbody.appendChild(tr);
+                    return;
+                }
+                entries.forEach((entry, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${entry.time}</td>
+                        <td>${entry.ml} mL</td>
+                        <td class="action-btns">
+                            <button class="icon-btn edit-btn" data-index="${idx}" title="Editar">✎</button>
+                            <button class="icon-btn del-btn" data-index="${idx}" title="Remover">✕</button>
+                        </td>
+                    `;
+                    entriesTbody.appendChild(tr);
+                });
+
+                document.querySelectorAll('.del-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        const index = parseInt(this.dataset.index);
+                        removeEntry(index);
+                    });
+                });
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        const index = parseInt(this.dataset.index);
+                        openEditModal(index);
+                    });
+                });
+            }
+
+            function renderMetrics(todayObj) {
+                const total = todayObj.total_ml;
+                const events = todayObj.events;
+                const avg = events ? Math.round(total / events) : 0;
+                const largest = todayObj.largest_drink_ml;
+                const dryMin = todayObj.longest_dry_interval_min;
+                const dryText = dryMin >= 60 ? `${Math.floor(dryMin/60)}h${dryMin%60}min` : `${dryMin}min`;
+                const consistency = todayObj.consistency_score;
+
+                metricsContainer.innerHTML = `
+                    <div class="metric-item">
+                        <span class="metric-label">Água total</span>
+                        <span class="metric-value">${total} mL<br><small>${(total/1000).toFixed(2)} L</small></span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Ingestões</span>
+                        <span class="metric-value">${events}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Média por ingestão</span>
+                        <span class="metric-value">${avg} mL</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Maior ingestão</span>
+                        <span class="metric-value">${largest} mL</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Longest Dry Interval</span>
+                        <span class="metric-value">${dryText}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Consistency Score</span>
+                        <span class="metric-value">${consistency}</span>
+                    </div>
+                `;
+            }
+
+            function renderBucket(total) {
+                const percent = Math.min(100, (total / CAPACITY) * 100);
+                bucketFill.style.width = percent + '%';
+                const displayPercent = Math.round((total / CAPACITY) * 100);
+                bucketText.textContent = `${total} / ${CAPACITY} mL (${displayPercent}%)`;
+            }
+
+            function renderMilestones(total) {
+                milestonesContainer.innerHTML = MILESTONES.map(m => {
+                    const progress = Math.min(100, (total / m) * 100);
+                    return `
+                        <div class="milestone">
+                            <div class="milestone-label">${m} mL</div>
+                            <div class="milestone-bar">
+                                <div class="milestone-fill" style="width:${progress}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function renderHistory(allData, todayIso) {
+                const pastDays = allData.filter(d => d.date !== todayIso).sort((a,b) => b.date.localeCompare(a.date));
+                if (pastDays.length === 0) {
+                    historyContainer.innerHTML = '<p style="color:#64748b;">Nenhum dia anterior.</p>';
+                    return;
+                }
+                historyContainer.innerHTML = pastDays.map(day => {
+                    const totalL = (day.total_ml / 1000).toFixed(2);
+                    const percent = Math.round((day.total_ml / CAPACITY) * 100);
+                    const dryMin = day.longest_dry_interval_min;
+                    const dryText = dryMin >= 60 ? `${Math.floor(dryMin/60)}h${dryMin%60}min` : `${dryMin}min`;
+                    return `
+                        <div class="day-card">
+                            <details>
+                                <summary class="day-summary">
+                                    <span><strong>${formatDateBR(day.date)}</strong> – ${totalL} L (${percent}%)</span>
+                                    <button class="delete-day" data-date="${day.date}" title="Apagar dia">✕</button>
+                                </summary>
+                                <div class="day-details">
+                                    <p>Água total: ${day.total_ml} mL</p>
+                                    <p>Número de ingestões: ${day.events}</p>
+                                    <p>Maior ingestão: ${day.largest_drink_ml} mL</p>
+                                    <p>Longest Dry Interval: ${dryText}</p>
+                                    <p>Consistency Score: ${day.consistency_score}</p>
+                                </div>
+                            </details>
+                        </div>
+                    `;
+                }).join('');
+
+                document.querySelectorAll('.delete-day').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (confirm(`Remover o dia ${formatDateBR(this.dataset.date)}?`)) {
+                            deleteDay(this.dataset.date);
+                        }
+                    });
+                });
+            }
+
+            function renderAll() {
+                const allData = loadAllData();
+                const todayIso = getTodayISO();
+                const todayObj = getTodayData(allData);
+                recalcMetrics(todayObj);
+                saveAllData(allData);
+                renderEntries(todayObj.entries);
+                renderMetrics(todayObj);
+                renderBucket(todayObj.total_ml);
+                renderMilestones(todayObj.total_ml);
+                renderHistory(allData, todayIso);
+            }
+
+            // Ações CRUD
+            function addEntry(ml) {
+                const allData = loadAllData();
+                const todayObj = getTodayData(allData);
+                todayObj.entries.push({ time: getCurrentTime(), ml: Number(ml) });
+                saveAllData(allData);
+                renderAll();
+            }
+
+            function removeEntry(index) {
+                const allData = loadAllData();
+                const todayObj = getTodayData(allData);
+                if (index >= 0 && index < todayObj.entries.length) {
+                    todayObj.entries.splice(index, 1);
+                    saveAllData(allData);
+                    renderAll();
+                }
+            }
+
+            function openEditModal(index) {
+                const allData = loadAllData();
+                const todayObj = getTodayData(allData);
+                if (index < 0 || index >= todayObj.entries.length) return;
+                const entry = todayObj.entries[index];
+                currentEditIndex = index;
+                editTimeInput.value = entry.time;
+                editMlInput.value = entry.ml;
+                editModal.style.display = 'flex';
+            }
+
+            function saveEdit() {
+                const time = editTimeInput.value;
+                const ml = parseInt(editMlInput.value);
+                if (!time || isNaN(ml) || ml <= 0) {
+                    alert('Preencha horário e quantidade válida.');
+                    return;
+                }
+                const allData = loadAllData();
+                const todayObj = getTodayData(allData);
+                if (currentEditIndex >= 0 && currentEditIndex < todayObj.entries.length) {
+                    todayObj.entries[currentEditIndex] = { time, ml };
+                    saveAllData(allData);
+                    editModal.style.display = 'none';
+                    renderAll();
+                }
+            }
+
+            function deleteDay(dateStr) {
+                let data = loadAllData();
+                data = data.filter(d => d.date !== dateStr);
+                saveAllData(data);
+                renderAll();
+            }
+
+            // Exportação
+            function exportJSON() {
+                const data = loadAllData();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'hydration_data.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            function exportCSV() {
+                const data = loadAllData();
+                let csv = 'date,time,ml\n';
+                data.forEach(day => {
+                    day.entries.forEach(entry => {
+                        csv += `${day.date},${entry.time},${entry.ml}\n`;
+                    });
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'hydration_data.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            // Eventos
+            addBtn.addEventListener('click', () => {
+                mlInput.value = 500;
+                addModal.style.display = 'flex';
+                mlInput.focus();
+            });
+            cancelAddBtn.addEventListener('click', () => addModal.style.display = 'none');
+            confirmAddBtn.addEventListener('click', () => {
+                const val = parseInt(mlInput.value);
+                if (!isNaN(val) && val > 0) {
+                    addEntry(val);
+                    addModal.style.display = 'none';
+                } else {
+                    alert('Insira uma quantidade válida.');
+                }
+            });
+            cancelEditBtn.addEventListener('click', () => editModal.style.display = 'none');
+            confirmEditBtn.addEventListener('click', saveEdit);
+
+            exportJsonBtn.addEventListener('click', exportJSON);
+            exportCsvBtn.addEventListener('click', exportCSV);
+
+            window.addEventListener('click', (e) => {
+                if (e.target === addModal) addModal.style.display = 'none';
+                if (e.target === editModal) editModal.style.display = 'none';
+            });
+            mlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') confirmAddBtn.click();
+            });
+            editMlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') saveEdit();
+            });
+
+            // Inicial
+            renderAll();
+        })();
+    </script>
+
+    <!-- Registro do Service Worker para PWA offline -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('Service Worker registrado'))
+                .catch((err) => console.error('Falha no Service Worker:', err));
+        }
+    </script>
+</body>
+</html>
